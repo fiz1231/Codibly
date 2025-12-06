@@ -1,8 +1,10 @@
 package com.demo.service;
 
-import com.demo.service.DataGetterExternalApi;
-import com.demo.dao.DataDao;
-import com.demo.dao.DataLoadingWindowRequest;
+import com.demo.dao.generationData.GenerationOutput;
+import com.demo.dao.windonData.WindonDataOutput;
+
+import java.time.ZonedDateTime;
+
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;
@@ -13,11 +15,11 @@ public class Facade {
     private final DataGetterExternalApi dataGetterExternalApi;
     private final DataLoadingWindowDeterminer dataLoadingWindowDeterminer;
 
-    public DataDao getData(){
-        return dataGetterExternalApi.getData();
+    public GenerationOutput getData(){
+        return dataGetterExternalApi.calculateAverageSharesForDays();
     }
-    public DataDao getLoadinfWindown(DataLoadingWindowRequest timeWindow){
-        return dataLoadingWindowDeterminer.getDataLoadingWindow(timeWindow);
+    public WindonDataOutput getLoadinfWindown(int windowDurationHours){
+        return dataLoadingWindowDeterminer.getDataLoadingWindow(windowDurationHours);
         
     }
 }

@@ -133,7 +133,7 @@ public class ApiRepository {
         return intervalsGroupedForDay.stream().map(x->x.getGenerationmix()).flatMap(x->x.stream()).collect(Collectors.groupingBy(x->x.fuel(),Collectors.mapping(x->x.perc(),Collectors.averagingDouble(x->x.doubleValue()))));
     }
     
-    public float calculateCleanEnergyPercent(Map<String,Double> averageDayValues){
+    private float calculateCleanEnergyPercent(Map<String,Double> averageDayValues){
         System.out.println("Execution : calculateCleanEnergyPercent");
         List.of("biomass", "nuclear", "hydro", "wind", "solar");
         float result=0;
@@ -221,7 +221,7 @@ public class ApiRepository {
        
 
 
-    public WindonDataOutput calculateOptimalChargingWindow(ZonedDateTime from,  ZonedDateTime to){
+    public WindonDataOutput calculateOptimalChargingWindow(ZonedDateTime from,  ZonedDateTime to, int windowDurationHours){
         System.out.println("Execution : calculateOptimalChargingWindow");
         DateTimeFormatter format =DateTimeFormatter.ofPattern("YYYY-MM-dd'T'hh:mmz");
         WindonDataOutput result = new WindonDataOutput();
@@ -233,7 +233,8 @@ public class ApiRepository {
             
 
             //count how many intervals there is 
-            int intervalsWindowrange =(int)TimeUnit.SECONDS.toMinutes(to.toEpochSecond() - from.toEpochSecond())/30;
+            //int intervalsWindowrange =(int)TimeUnit.SECONDS.toMinutes(to.toEpochSecond() - from.toEpochSecond())/30;
+            int intervalsWindowrange =(int) TimeUnit.HOURS.toMinutes((long)windowDurationHours)/30;
             System.out.println("intervalswindowsrange"+intervalsWindowrange);
             //find the best window
             float theBestResult=0f;
@@ -278,7 +279,7 @@ public class ApiRepository {
             ZonedDateTime from = ZonedDateTime.of(2025, 10, 5 ,0 , 0, 0, 0, ZoneId.of("Z"));
             ZonedDateTime to = ZonedDateTime.of(2025, 10, 5 ,12 , 0, 0, 0, ZoneId.of("Z"));
            
-            WindonDataOutput test5 = test.calculateOptimalChargingWindow(from, to);
+            WindonDataOutput test5 = test.calculateOptimalChargingWindow(from, to,6);
             System.out.println(test5.getCleanEnergyPercent());
         
         }

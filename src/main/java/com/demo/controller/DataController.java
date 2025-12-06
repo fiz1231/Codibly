@@ -13,6 +13,8 @@ import lombok.AllArgsConstructor;
 import com.demo.service.Facade;
 import com.demo.dao.DataDao;
 import com.demo.dao.DataLoadingWindowRequest;
+import com.demo.dao.generationData.GenerationOutput;
+import com.demo.dao.windonData.WindonDataOutput;
 
 @RestController
 @RequestMapping("/v1/codibly")
@@ -24,15 +26,15 @@ public class DataController {
     @GetMapping()
     public ResponseEntity<? super DataDao> getDataOnEnergyMix(){
 
-        DataDao body = facade.getData();
+        GenerationOutput body = facade.getData();
         return ResponseEntity.ok(body);
     }
 
     
     @CrossOrigin
     @PostMapping
-    public ResponseEntity<? super DataDao> getLoadingWindow(@RequestBody DataLoadingWindowRequest timeWindow){
-        DataDao body = facade.getLoadinfWindown(timeWindow);
+    public ResponseEntity<? super DataDao> getLoadingWindow(@RequestBody int timeWindow){
+        WindonDataOutput body = facade.getLoadinfWindown(timeWindow);
         return ResponseEntity.ok(body);
     }
 }
