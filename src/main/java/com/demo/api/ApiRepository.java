@@ -1,20 +1,20 @@
 package com.demo.api;
 
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
+
 import java.net.URL;
-import java.text.Collator;
+
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collector;
+import java.util.concurrent.TimeUnit;
+
 import java.util.stream.Collectors;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -26,6 +26,8 @@ import com.demo.dao.generationData.GenerationMix;
 import com.demo.dao.generationData.GenerationOutput;
 import com.demo.dao.generationData.ResponseGetIntervaOfEnnergyMix;
 import com.demo.dao.generationData.ResponseProcessedIntervalOfEnergyMix;
+import com.demo.dao.windonData.IntervalData;
+import com.demo.dao.windonData.WindonDataOutput;
 
 import lombok.AllArgsConstructor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -37,7 +39,7 @@ public class ApiRepository {
 
     private static ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     
-    //static private
+    
     private List<ResponseGetIntervaOfEnnergyMix> getIntervalOfEnergyMix(String from , String to) throws IOException{
         // URL obj = new URL("https://api.carbonintensity.org.uk/generation/"+ from + "/" + to);
         // HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -72,7 +74,7 @@ public class ApiRepository {
         
         
          */
-        
+      
         System.out.println("Execution : getIntervalOfEnergyMix");
         String url = "https://api.carbonintensity.org.uk/generation/"+ from + "/" + to;// maybe use DateTimeFormatter?
         URL objUrl = new URL(url);
@@ -142,6 +144,7 @@ public class ApiRepository {
         }
         return result;
     }
+    
     public GenerationOutput calculateAverageSharesForDays(ZonedDateTime from,  ZonedDateTime to){
         System.out.println("Execution : calculateAverageSharesForDays");
         DateTimeFormatter format =DateTimeFormatter.ofPattern("YYYY-MM-dd'T'hh:mmz");
@@ -177,6 +180,89 @@ public class ApiRepository {
         return new GenerationOutput(returnObject);
     }
 
+    //Endpoint 2 
+    private List<IntervalData> calculateClearEnergyForEveryIntervals(List<ResponseGetIntervaOfEnnergyMix>intervalListInput){
+        System.out.println("Execution : calculateClearEnergyForEveryIntervals");
+        List<IntervalData> result = new ArrayList<IntervalData>();
+         float greenEnergyPercent=0;
+        
+        for(ResponseGetIntervaOfEnnergyMix interval : intervalListInput){
+            for(GenerationMix intervalGenerationMix :interval.getGenerationmix()){
+                if(List.of("biomass", "nuclear", "hydro", "wind", "solar").contains(intervalGenerationMix.fuel())){
+                    
+                    greenEnergyPercent+=intervalGenerationMix.perc();
+                    
+                }
+                else{
+                    continue;
+                }
+            }
+            System.out.println("GreenEnergyPercentToResult: "+greenEnergyPercent);
+            result.add(new IntervalData(interval.getFrom(),interval.getTo(),greenEnergyPercent));
+            greenEnergyPercent=0;
+        }
+        return result;
+
+    }
+      private float[] generateSumArray(List<IntervalData> intervalDatas){
+        System.out.println("Execution : generateSumArray");
+        float[] validateArray = new float[intervalDatas.size()];
+        validateArray[0]=intervalDatas.get(0).cleanEnergyPercent();
+
+            for(int i=1; i<validateArray.length ;i++){
+                
+                validateArray[i] = intervalDatas.get(i).cleanEnergyPercent()+intervalDatas.get(i-1).cleanEnergyPercent();
+                System.out.println("ValidateArray: "+i+validateArray[i]);
+            }
+            return validateArray;
+        }
+        
+        
+       
+
+
+    public WindonDataOutput calculateOptimalChargingWindow(ZonedDateTime from,  ZonedDateTime to){
+        System.out.println("Execution : calculateOptimalChargingWindow");
+        DateTimeFormatter format =DateTimeFormatter.ofPattern("YYYY-MM-dd'T'hh:mmz");
+        WindonDataOutput result = new WindonDataOutput();
+        try{
+            List<ResponseGetIntervaOfEnnergyMix> apiCallResponse = this.getIntervalOfEnergyMix(from.format(format),to.format(format));
+            //Process count for every interval percento of green energy 
+            List<IntervalData> intervalsWithcleenEnergyPercent = this.calculateClearEnergyForEveryIntervals(apiCallResponse);
+            float[] sumArray = this.generateSumArray(intervalsWithcleenEnergyPercent);
+            
+
+            //count how many intervals there is 
+            int intervalsWindowrange =(int)TimeUnit.SECONDS.toMinutes(to.toEpochSecond() - from.toEpochSecond())/30;
+            System.out.println("intervalswindowsrange"+intervalsWindowrange);
+            //find the best window
+            float theBestResult=0f;
+            int theBestIndexStart=0;
+            int theBestIndexEnd=intervalsWindowrange;
+            for (int start = 0;start+intervalsWindowrange<sumArray.length; start++){
+                
+                if(((sumArray[start+intervalsWindowrange] - (start!=0 ? 0f:sumArray[start])) >theBestResult)){
+                    theBestResult = sumArray[start+intervalsWindowrange]/intervalsWindowrange;
+                    theBestIndexStart = start;
+                    theBestIndexEnd = start+intervalsWindowrange;
+                    System.out.println("theBestResult: "+theBestResult);
+                }
+
+            }
+            //i have range of intevals, not wime to send them to result object
+            
+            result.setCleanEnergyPercent(theBestResult);
+            result.setFrom(intervalsWithcleenEnergyPercent.get(theBestIndexStart).from().toString());
+            result.setFrom(intervalsWithcleenEnergyPercent.get(theBestIndexEnd).from().toString());
+            
+            
+        }
+        catch(IOException e){
+            System.out.println(e.getMessage());
+        }
+        return result;
+        //return new GenerationOutput(returnObject);
+    }
     // testing repository method
     // compile exec:java -Dexec.mainClass="com.demo.api.ApiRepository"
     public void main(){
@@ -188,10 +274,12 @@ public class ApiRepository {
             // var test3=test.calculateAverageValues​(test2.entrySet().stream().findAny().get().getValue());
             // System.out.println(test3.values());
             System.out.println("Createed output ogject");
+            //Side note if you send https://api.carbonintensity.org.uk/generation/2025-10-05T12:00Z/2025-10-05T12:00Z to api you will get error, maybe it's not recognize noon from midnight?
             ZonedDateTime from = ZonedDateTime.of(2025, 10, 5 ,0 , 0, 0, 0, ZoneId.of("Z"));
-            ZonedDateTime to = ZonedDateTime.of(2025, 10, 8 ,0 , 0, 0, 0, ZoneId.of("Z"));
-            GenerationOutput test4 = test.calculateAverageSharesForDays(from,to);
-            System.out.println(test4.data().toString());
+            ZonedDateTime to = ZonedDateTime.of(2025, 10, 5 ,12 , 0, 0, 0, ZoneId.of("Z"));
+           
+            WindonDataOutput test5 = test.calculateOptimalChargingWindow(from, to);
+            System.out.println(test5.getCleanEnergyPercent());
         
         }
         catch (Exception e ){
