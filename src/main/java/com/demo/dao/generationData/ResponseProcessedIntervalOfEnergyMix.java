@@ -14,7 +14,8 @@ import java.util.List;
 @Getter
 @Setter
 public class ResponseProcessedIntervalOfEnergyMix {
-     private String from;
+    private String from;
     private String to;
     private List<GenerationMix> generationmix;
+    private float cleanEnergyPercent; 
 }

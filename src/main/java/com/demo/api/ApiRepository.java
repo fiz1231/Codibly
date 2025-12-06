@@ -131,6 +131,17 @@ public class ApiRepository {
         return intervalsGroupedForDay.stream().map(x->x.getGenerationmix()).flatMap(x->x.stream()).collect(Collectors.groupingBy(x->x.fuel(),Collectors.mapping(x->x.perc(),Collectors.averagingDouble(x->x.doubleValue()))));
     }
     
+    public float calculateCleanEnergyPercent(Map<String,Double> averageDayValues){
+        System.out.println("Execution : calculateCleanEnergyPercent");
+        List.of("biomass", "nuclear", "hydro", "wind", "solar");
+        float result=0;
+        for (String key : averageDayValues.keySet()){
+            if(List.of("biomass", "nuclear", "hydro", "wind", "solar").contains(key)){
+                result+=averageDayValues.get(key);
+            }
+        }
+        return result;
+    }
     public GenerationOutput calculateAverageSharesForDays(ZonedDateTime from,  ZonedDateTime to){
         System.out.println("Execution : calculateAverageSharesForDays");
         DateTimeFormatter format =DateTimeFormatter.ofPattern("YYYY-MM-dd'T'hh:mmz");
@@ -153,7 +164,9 @@ public class ApiRepository {
                 outputData.setFrom(from.toString());
                 outputData.setFrom(from.plusDays(1).toString());
                 outputData.setGenerationmix(resultGenerationMixs);
+                outputData.setCleanEnergyPercent(this.calculateCleanEnergyPercent(dayAverageMix));
                 returnObject.add(outputData);
+                
                 resultGenerationMixs.clear();
             }
             System.out.println("Createed output ogject");
