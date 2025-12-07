@@ -13,7 +13,8 @@ import com.demo.dao.generationData.GenerationOutput;
 public class DataGetterExternalApi {
     private final ApiRepository apiRepository;
     public GenerationOutput calculateAverageSharesForDays(){
-        ZonedDateTime from =ZonedDateTime.now().withHour(0).withMinute(0).withNano(0).withZoneSameInstant(ZoneId.of("Z"));
+        ZonedDateTime from = ZonedDateTime.now().withHour(0).withMinute(0).withNano(0).withZoneSameInstant(ZoneId.of("Z"));
+        
         ZonedDateTime to =from.plusDays(2);
         return apiRepository.calculateAverageSharesForDays(from, to);
         
